@@ -1,6 +1,6 @@
 {
   "name": "narmafzar",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "NEON CAD — neon sign design & fabrication web app, single-file Cloudflare Worker",
   "type": "module",
   "private": true,

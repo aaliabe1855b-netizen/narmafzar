@@ -3,6 +3,7 @@
 // Single-file Cloudflare Worker — serves the complete client-side app.
 // All geometry, cut-list, power and bin-packing processing runs in the browser.
 // No build step, no external dependencies. See docs/DESIGN.md and README.md.
+// Build marker: v1.0.1 (2026-09-27) — change kept trivial to exercise CI/CD.
 // =============================================================================
 
 const HTML_PAGE = `<!DOCTYPE html>
