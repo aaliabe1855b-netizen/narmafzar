@@ -216,12 +216,25 @@ tr.tot td{color:var(--gold); border-top:2px solid var(--line2);}
     <button id="btnCheck" class="btn primary">CHECK DESIGN</button>
     <button id="btnPrint" class="btn accent">PRINT / PDF</button>
     <div class="sep"></div>
+    <button id="btnTrace" class="btn sm" title="Upload any image and convert it to neon-ready vector paths">TRACE IMAGE</button>
+    <select id="exampleSel" class="proj-name" style="width:170px" title="Load a professional example">
+      <option value="">EXAMPLES…</option>
+      <option value="cafe">Cafe Sign — circle + نئون</option>
+      <option value="shapes">Shapes Gallery</option>
+      <option value="chain">Chain ABCD (cut list demo)</option>
+      <option value="empty">Empty board</option>
+    </select>
+    <div class="sep"></div>
     <div class="export-group">
       <button id="expSvg" class="btn sm" title="Export SVG (real scale)">SVG</button>
       <button id="expDxf" class="btn sm" title="Export DXF (R12, cm)">DXF</button>
       <button id="expPng" class="btn sm" title="Export PNG (3x)">PNG</button>
       <button id="expCsv" class="btn sm" title="Export cut list CSV">CSV</button>
       <button id="expJson" class="btn sm" title="Export project JSON">JSON</button>
+    </div>
+    <div class="export-group">
+      <button id="expCutDxf" class="btn sm accent" title="CUT FILE for the cutting machine — double-line channel (DXF)">CUT DXF</button>
+      <button id="expCutSvg" class="btn sm accent" title="CUT FILE for the cutting machine — double-line channel (SVG)">CUT SVG</button>
     </div>
     <div class="sep"></div>
     <button id="btnSave" class="btn sm" title="Save project in browser">SAVE</button>
@@ -243,6 +256,7 @@ tr.tot td{color:var(--gold); border-top:2px solid var(--line2);}
       <div class="tool" data-tool="measure"><span class="ico">&#8646;</span>Measure</div>
       <div class="tool-h">EDIT</div>
       <div class="tool" id="toolSnap"><span class="ico">&#8862;</span>Snap Grid</div>
+      <div class="tool" id="toolChannel"><span class="ico">&#8741;</span>Channel</div>
       <div class="tool" id="toolSnapLen"><span class="ico">&#8776;</span>Snap Lengths</div>
       <div class="tool" id="toolReverse"><span class="ico">&#8644;</span>Reverse</div>
       <div class="tool" id="toolDelete"><span class="ico">&#10006;</span>Delete</div>
@@ -302,7 +316,10 @@ tr.tot td{color:var(--gold); border-top:2px solid var(--line2);}
           <div class="unit"><input id="propGrid" type="number" min="0.1" step="0.1" value="0.5"><i>cm</i></div></div>
         <div class="p-row"><label>Node Tolerance</label>
           <div class="unit"><input id="propNodeTol" type="number" min="0.05" step="0.05" value="0.5"><i>cm</i></div></div>
+        <div class="p-row"><label>Cutting Channel Width</label>
+          <div class="unit"><input id="propChannel" type="number" min="1" step="0.5" value="10"><i>mm</i></div></div>
       </div>
+      <div class="p-row"><label><input id="chkCutCenter" type="checkbox"> Include centerline in cutter files</label></div>
       <div class="p-actions">
         <button id="btnAutoAll" class="btn sm primary">AUTO: Snap + Build Cut List</button>
       </div>
@@ -396,8 +413,35 @@ tr.tot td{color:var(--gold); border-top:2px solid var(--line2);}
   </div>
 </div>
 
+<!-- ============ TRACE IMAGE MODAL ============ -->
+<div class="modal hidden" id="modalTrace">
+  <div class="modal-card">
+    <h2>TRACE IMAGE &rarr; NEON PATHS</h2>
+    <div class="sub">Any image (PNG / JPG / WEBP / GIF / BMP) &rarr; centerline vectors &rarr; snapped to the 2.5 cm cutting grid &rarr; ready for the cutting machine via CUT DXF / CUT SVG (double-line channel).</div>
+    <div style="display:flex; gap:14px; align-items:flex-start">
+      <div style="flex:1; min-width:0">
+        <canvas id="traceCv" style="width:100%; border:1px solid #2e3d52; border-radius:8px; background:#fff; max-height:340px"></canvas>
+      </div>
+      <div style="width:230px">
+        <div class="p-row"><label>Threshold</label><input id="traceThresh" type="range" min="20" max="240" value="128"></div>
+        <div class="p-row"><label>Detail (0=fine, 40=coarse)</label><input id="traceDetail" type="range" min="2" max="40" value="14"></div>
+        <div class="p-row"><label>Min stroke length</label>
+          <div class="unit"><input id="traceMinLen" type="number" min="0.5" step="0.5" value="3"><i>cm</i></div></div>
+        <div class="p-row"><label><input id="traceInvert" type="checkbox"> Invert (light shape on dark)</label></div>
+        <div class="p-row"><label><input id="traceSmooth" type="checkbox" checked> Smooth curves (bezier)</label></div>
+        <p class="hint">Use high-contrast images (logo, line art, text). The result is the NEON CENTERLINE; every length is corrected geometrically to the cutting grid. Export <b>CUT DXF</b> for the machine: it contains the double outline (channel) where the neon strip sits.</p>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button id="traceCancel" class="btn">Cancel</button>
+      <button id="traceApply" class="btn primary">Add to design</button>
+    </div>
+  </div>
+</div>
+
 <div id="printArea"></div>
 <input type="file" id="fileInput" accept=".svg,.json,.txt" style="display:none">
+<input type="file" id="imgInput" accept="image/*" style="display:none">
 
 <script>
 /* =========================================================================
@@ -803,7 +847,8 @@ function demoProject() {
     board: { widthCm: 200, heightCm: 100 },
     settings: {
       intervalCm: 2.5, maxPieceLengthCm: 500, minSpacingCm: 1.5,
-      safetyFactor: 80, psuCapacityW: 0, nodeTolCm: 0.5, joinGapCm: 1.0, gridCm: 0.5
+      safetyFactor: 80, psuCapacityW: 0, nodeTolCm: 0.5, joinGapCm: 1.0, gridCm: 0.5,
+      channelMm: 10
     },
     profile: {
       name: "Neon Flex 8mm", widthMm: 8, voltageV: 24,
@@ -825,6 +870,307 @@ function demoProject() {
   return project;
 }
 
+/* ---- simplify (Ramer-Douglas-Peucker) ---- */
+function rdpSimplify(pts, eps) {
+  if (pts.length < 3) return pts.slice();
+  var keep = new Array(pts.length);
+  keep[0] = true; keep[pts.length - 1] = true;
+  var stack = [[0, pts.length - 1]];
+  while (stack.length) {
+    var seg = stack.pop(), a = seg[0], b = seg[1];
+    var maxD = -1, idx = -1;
+    var A = pts[a], B = pts[b];
+    var dx = B.x - A.x, dy = B.y - A.y, len2 = dx * dx + dy * dy;
+    for (var i = a + 1; i < b; i++) {
+      var d;
+      if (len2 < 1e-12) {
+        d = dist(pts[i], A);
+      } else {
+        var t = ((pts[i].x - A.x) * dx + (pts[i].y - A.y) * dy) / len2;
+        t = clamp(t, 0, 1);
+        d = dist(pts[i], { x: A.x + dx * t, y: A.y + dy * t });
+      }
+      if (d > maxD) { maxD = d; idx = i; }
+    }
+    if (maxD > eps && idx > 0) {
+      keep[idx] = true;
+      stack.push([a, idx], [idx, b]);
+    }
+  }
+  var out = [];
+  for (var k = 0; k < pts.length; k++) if (keep[k]) out.push(pts[k]);
+  return out;
+}
+
+/* ---- polyline offset: double-line cutting channel around a centerline ----
+   d > 0 offsets to the left of the direction of travel, d < 0 to the right. */
+function offsetPolyline(pts, d, closed) {
+  var m = pts.length;
+  if (m < 2) return [];
+  var P = pts;
+  if (closed && dist(P[0], P[m - 1]) > 1e-9) {
+    P = pts.slice();
+    P.push({ x: pts[0].x, y: pts[0].y });
+    m = P.length;
+  }
+  var nrm = [];
+  for (var s = 0; s < m - 1; s++) {
+    var dx = P[s + 1].x - P[s].x, dy = P[s + 1].y - P[s].y;
+    var l = Math.sqrt(dx * dx + dy * dy) || 1;
+    nrm.push({ x: dy / l, y: -dx / l });
+  }
+  function vertexOffset(i) {
+    /* i: vertex index in 0..m-1 (for closed, m-1 duplicates 0 and is handled by caller) */
+    var ia = i - 1, ib = i;
+    var na = nrm[ia], nb = nrm[ib];
+    var bx = na.x + nb.x, by = na.y + nb.y;
+    var bl = Math.sqrt(bx * bx + by * by);
+    if (bl < 1e-9) {
+      /* 180 degree turn -> bevel */
+      return [
+        { x: P[i].x + na.x * d, y: P[i].y + na.y * d },
+        { x: P[i].x + nb.x * d, y: P[i].y + nb.y * d }
+      ];
+    }
+    bx /= bl; by /= bl;
+    var denom = bx * nb.x + by * nb.y;
+    var miter = d / Math.max(denom, 0.45);
+    var lim = Math.abs(d) * 3;
+    if (Math.abs(miter) > lim) miter = miter > 0 ? lim : -lim;
+    return [{ x: P[i].x + bx * miter, y: P[i].y + by * miter }];
+  }
+  var out = [];
+  if (!closed) {
+    out.push({ x: P[0].x + nrm[0].x * d, y: P[0].y + nrm[0].y * d });
+    for (var i = 1; i < m - 1; i++) {
+      var vo = vertexOffset(i);
+      for (var q = 0; q < vo.length; q++) out.push(vo[q]);
+    }
+    out.push({ x: P[m - 1].x + nrm[m - 2].x * d, y: P[m - 1].y + nrm[m - 2].y * d });
+    return out;
+  }
+  var real = m - 1; /* number of real vertices (last == first) */
+  for (var j = 0; j < real; j++) {
+    /* vertex j uses normals [j-1] and [j] with wrap for closed shapes */
+    var na2 = nrm[(j - 1 + real) % real], nb2 = nrm[j];
+    var bx2 = na2.x + nb2.x, by2 = na2.y + nb2.y;
+    var bl2 = Math.sqrt(bx2 * bx2 + by2 * by2), pt;
+    if (bl2 < 1e-9) {
+      out.push({ x: P[j].x + na2.x * d, y: P[j].y + na2.y * d });
+      pt = { x: P[j].x + nb2.x * d, y: P[j].y + nb2.y * d };
+    } else {
+      bx2 /= bl2; by2 /= bl2;
+      var den2 = bx2 * nb2.x + by2 * nb2.y;
+      var mit2 = d / Math.max(den2, 0.45);
+      var lim2 = Math.abs(d) * 3;
+      if (Math.abs(mit2) > lim2) mit2 = mit2 > 0 ? lim2 : -lim2;
+      pt = { x: P[j].x + bx2 * mit2, y: P[j].y + by2 * mit2 };
+    }
+    out.push(pt);
+  }
+  out.push({ x: out[0].x, y: out[0].y });
+  return out;
+}
+
+/* ---- flatten a path (polyline or bezier) to dense polyline points ---- */
+function flattenPath(path, step) {
+  step = step || 0.5;
+  var segs = pathSegs(path), out = [];
+  for (var i = 0; i < segs.length; i++) {
+    var seg = segs[i], L = segLength(seg);
+    var n = Math.max(2, Math.ceil(L / step));
+    for (var k = (i === 0 ? 0 : 1); k <= n; k++) out.push(segPoint(seg, k / n));
+  }
+  return out;
+}
+
+/* ---- raster -> centerline pipeline (image trace / text trace) ---- */
+function binarize(rgba, w, h, threshold, invert) {
+  var bin = new Uint8Array(w * h);
+  for (var i = 0, p = 0; i < bin.length; i++, p += 4) {
+    var lum = 0.299 * rgba[p] + 0.587 * rgba[p + 1] + 0.114 * rgba[p + 2];
+    var on = lum < threshold;
+    if (invert) on = !on;
+    bin[i] = on ? 1 : 0;
+  }
+  return bin;
+}
+function zhangSuen(bin, w, h) {
+  var img = Uint8Array.from ? Uint8Array.from(bin) : Uint8Array.prototype.slice.call(bin);
+  var NB = [-w, -w + 1, 1, w + 1, w, w - 1, -1, -w - 1]; /* N NE E SE S SW W NW */
+  var changed = true, iter = 0;
+  while (changed && iter < 300) {
+    changed = false;
+    for (var step = 0; step < 2; step++) {
+      var toDel = [];
+      for (var y = 1; y < h - 1; y++) {
+        for (var x = 1; x < w - 1; x++) {
+          var idx = y * w + x;
+          if (!img[idx]) continue;
+          var p = [0, 0, 0, 0, 0, 0, 0, 0], B = 0, k;
+          for (k = 0; k < 8; k++) {
+            p[k] = img[idx + NB[k]] ? 1 : 0;
+            B += p[k];
+          }
+          if (B < 2 || B > 6) continue;
+          var A = 0;
+          for (k = 0; k < 8; k++) if (!p[k] && p[(k + 1) % 8]) A++;
+          if (A !== 1) continue;
+          if (step === 0) {
+            if (p[0] * p[2] * p[4] !== 0) continue;
+            if (p[2] * p[4] * p[6] !== 0) continue;
+          } else {
+            if (p[0] * p[2] * p[6] !== 0) continue;
+            if (p[0] * p[4] * p[6] !== 0) continue;
+          }
+          toDel.push(idx);
+        }
+      }
+      if (toDel.length) {
+        changed = true;
+        for (var t = 0; t < toDel.length; t++) img[toDel[t]] = 0;
+      }
+    }
+    iter++;
+  }
+  return img;
+}
+function traceSkeleton(skel, w, h, minLenPx) {
+  var BIG = w * h + 1;
+  function nbrs(id) {
+    var x = id % w, y = (id / w) | 0, out = [];
+    for (var dy = -1; dy <= 1; dy++) {
+      for (var dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        var nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        var nid = ny * w + nx;
+        if (skel[nid]) out.push(nid);
+      }
+    }
+    return out;
+  }
+  function key(a, b) { return a < b ? a * BIG + b : b * BIG + a; }
+  function toPt(id) { return { x: id % w, y: (id / w) | 0 }; }
+  var visited = new Set(), chains = [];
+  function walk(start, first) {
+    var chain = [start, first];
+    visited.add(key(start, first));
+    var prev = start, cur = first;
+    while (true) {
+      var ns = nbrs(cur), usable = [];
+      for (var i = 0; i < ns.length; i++) {
+        if (ns[i] === prev) continue;
+        if (visited.has(key(cur, ns[i]))) continue;
+        usable.push(ns[i]);
+      }
+      if (usable.length === 1 && ns.length === 2) {
+        var nxt = usable[0];
+        visited.add(key(cur, nxt));
+        chain.push(nxt);
+        prev = cur; cur = nxt;
+      } else break;
+    }
+    return chain;
+  }
+  var nodeIds = [];
+  for (var id = 0; id < skel.length; id++) {
+    if (!skel[id]) continue;
+    if (nbrs(id).length !== 2) nodeIds.push(id);
+  }
+  var minL = minLenPx || 4;
+  for (var n = 0; n < nodeIds.length; n++) {
+    var s = nodeIds[n], ss = nbrs(s);
+    for (var j = 0; j < ss.length; j++) {
+      if (visited.has(key(s, ss[j]))) continue;
+      var ch = walk(s, ss[j]);
+      if (ch.length >= minL) chains.push(ch.map(toPt));
+    }
+  }
+  /* pure loops (all degree-2) */
+  for (var id2 = 0; id2 < skel.length; id2++) {
+    if (!skel[id2]) continue;
+    var ns2 = nbrs(id2);
+    for (var k = 0; k < ns2.length; k++) {
+      if (visited.has(key(id2, ns2[k]))) continue;
+      var ch2 = walk(id2, ns2[k]);
+      if (ch2.length >= minL) chains.push(ch2.map(toPt));
+    }
+  }
+  return chains;
+}
+
+/* ---- catmull-rom control points for a smooth cubic chain through pts ---- */
+function catmullCtrl(pts) {
+  var n = pts.length, ctrl = [];
+  for (var i = 0; i < n - 1; i++) {
+    var p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(n - 1, i + 2)];
+    ctrl.push({
+      c1: { x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6 },
+      c2: { x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6 }
+    });
+  }
+  return ctrl;
+}
+
+/* ---- traced chains -> path geometry ({type, points, ctrl}) ---- */
+function chainsToPaths(chains, opts) {
+  opts = opts || {};
+  var eps = opts.eps === undefined ? 1.2 : opts.eps;
+  var out = [];
+  for (var c = 0; c < chains.length; c++) {
+    var pts = rdpSimplify(chains[c], eps);
+    if (pts.length < 2) continue;
+    if (opts.smooth !== false && pts.length >= 3) {
+      if (pts.length > 64) {
+        var step = Math.ceil(pts.length / 64), sub = [], s;
+        for (s = 0; s < pts.length; s += step) sub.push({ x: pts[s].x, y: pts[s].y });
+        if (sub[sub.length - 1] !== pts[pts.length - 1]) sub.push(pts[pts.length - 1]);
+        pts = sub;
+      }
+      out.push({ type: 'bezier', points: pts, ctrl: catmullCtrl(pts) });
+    } else {
+      out.push({ type: 'polyline', points: pts, ctrl: null });
+    }
+  }
+  return out;
+}
+
+/* ---- fit traced geometry into the board (keeps aspect) ---- */
+function fitPathsToBoard(geoms, W, H, marginFrac) {
+  var mg = marginFrac === undefined ? 0.06 : marginFrac;
+  var minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9, i, j, p;
+  function acc(pt) {
+    if (pt.x < minX) minX = pt.x;
+    if (pt.y < minY) minY = pt.y;
+    if (pt.x > maxX) maxX = pt.x;
+    if (pt.y > maxY) maxY = pt.y;
+  }
+  for (i = 0; i < geoms.length; i++) {
+    for (j = 0; j < geoms[i].points.length; j++) acc(geoms[i].points[j]);
+    if (geoms[i].ctrl) for (j = 0; j < geoms[i].ctrl.length; j++) {
+      if (geoms[i].ctrl[j]) { acc(geoms[i].ctrl[j].c1); acc(geoms[i].ctrl[j].c2); }
+    }
+  }
+  if (minX > maxX) return 1;
+  var bw = Math.max(maxX - minX, 1e-6), bh = Math.max(maxY - minY, 1e-6);
+  var sc = Math.min(W * (1 - 2 * mg) / bw, H * (1 - 2 * mg) / bh);
+  var offX = (W - bw * sc) / 2 - minX * sc, offY = (H - bh * sc) / 2 - minY * sc;
+  for (i = 0; i < geoms.length; i++) {
+    for (j = 0; j < geoms[i].points.length; j++) {
+      p = geoms[i].points[j];
+      p.x = p.x * sc + offX; p.y = p.y * sc + offY;
+    }
+    if (geoms[i].ctrl) for (j = 0; j < geoms[i].ctrl.length; j++) {
+      var cc = geoms[i].ctrl[j];
+      if (!cc) continue;
+      cc.c1.x = cc.c1.x * sc + offX; cc.c1.y = cc.c1.y * sc + offY;
+      cc.c2.x = cc.c2.x * sc + offX; cc.c2.y = cc.c2.y * sc + offY;
+    }
+  }
+  return sc;
+}
+
 /* export the pure core for tests / console */
 var NEONCORE = {
   dist: dist, fmt: fmt, pathLength: pathLength, pathCum: pathCum,
@@ -832,7 +1178,10 @@ var NEONCORE = {
   snapTarget: snapTarget, snapPath: snapPath,
   buildPieces: buildPieces, computeNodes: computeNodes,
   computePower: computePower, packRolls: packRolls,
-  demoProject: demoProject, segLength: segLength, splitSeg: splitSeg
+  demoProject: demoProject, segLength: segLength, splitSeg: splitSeg,
+  rdpSimplify: rdpSimplify, offsetPolyline: offsetPolyline, flattenPath: flattenPath,
+  binarize: binarize, zhangSuen: zhangSuen, traceSkeleton: traceSkeleton,
+  catmullCtrl: catmullCtrl, chainsToPaths: chainsToPaths, fitPathsToBoard: fitPathsToBoard
 };
 
 /* =========================================================================
@@ -851,6 +1200,7 @@ var S = {
   nodes: [], pieces: [], power: null, pack: null, issues: [],
   view: { x: -8, y: -6, zoom: 7.5 },
   gridOn: true,
+  showChannel: false,
   spaceDown: false,
   drag: null, hoverW: null, draft: null, measure: null,
   undo: [], redo: [],
@@ -1047,6 +1397,20 @@ function draw() {
     ctx.fillRect(nd.x + 1.1, nd.y - 2.4, 1.6, 2.2);
     ctx.fillStyle = '#fbbf24';
     ctx.fillText(nd.label, nd.x + 1.2, nd.y - 0.7);
+  }
+
+  /* channel (double-line cutting preview) */
+  if (S.showChannel) {
+    ctx.strokeStyle = '#ffffff77';
+    ctx.lineWidth = 0.16;
+    ctx.setLineDash([0.7, 0.5]);
+    for (var chI = 0; chI < pr.paths.length; chI++) {
+      var chd = channelForPath(pr.paths[chI]);
+      if (!chd) continue;
+      drawPts(ctx, chd.left);
+      drawPts(ctx, chd.right);
+    }
+    ctx.setLineDash([]);
   }
 
   /* selection + vertices */
@@ -2256,6 +2620,7 @@ function syncPropsFromProject() {
   $('propPsu').value = pr.settings.psuCapacityW;
   $('propGrid').value = pr.settings.gridCm;
   $('propNodeTol').value = pr.settings.nodeTolCm;
+  $('propChannel').value = pr.settings.channelMm || 10;
   $('profName').value = pr.profile.name || '';
   refreshProfileSel();
 }
@@ -2277,6 +2642,7 @@ function readProps() {
   pr.settings.psuCapacityW = Math.max(0, num($('propPsu').value, 0));
   pr.settings.gridCm = Math.max(0.05, num($('propGrid').value, 0.5));
   pr.settings.nodeTolCm = Math.max(0.05, num($('propNodeTol').value, 0.5));
+  pr.settings.channelMm = Math.max(1, num($('propChannel').value, 10));
 }
 
 /* ---- path edit helpers ---- */
@@ -2311,6 +2677,361 @@ function snapAll() {
   setStatus('Snap lengths: ' + ok + ' corrected, ' + fail + ' could not be corrected geometrically.', fail ? 'warn' : 'ok');
 }
 
+/* =========================================================================
+   PROFESSIONAL EXAMPLES / IMAGE TRACE / DOUBLE-LINE CUT CHANNEL
+   ========================================================================= */
+function emptyProject() {
+  var d = demoProject();
+  d.paths = []; d.texts = [];
+  d.name = 'New Project';
+  d.settings.channelMm = 10;
+  return d;
+}
+function wrapGeoms(geoms) {
+  var out = [];
+  for (var i = 0; i < geoms.length; i++) {
+    out.push({
+      id: newId(), name: '', type: geoms[i].type,
+      points: geoms[i].points, ctrl: geoms[i].ctrl || null,
+      lockedStart: false, lockedEnd: false,
+      snapped: false, snapDelta: 0, origPoints: null,
+      note: geoms[i].note || ''
+    });
+  }
+  return out;
+}
+
+/* ---- shape builders (smooth bezier neon geometry) ---- */
+function geomCircle(cx, cy, r) {
+  var k = 0.5522847498 * r;
+  return {
+    type: 'bezier', closed: true,
+    points: [
+      { x: cx + r, y: cy }, { x: cx, y: cy + r }, { x: cx - r, y: cy },
+      { x: cx, y: cy - r }, { x: cx + r, y: cy }
+    ],
+    ctrl: [
+      { c1: { x: cx + r, y: cy + k }, c2: { x: cx + k, y: cy + r } },
+      { c1: { x: cx - k, y: cy + r }, c2: { x: cx - r, y: cy + k } },
+      { c1: { x: cx - r, y: cy - k }, c2: { x: cx - k, y: cy - r } },
+      { c1: { x: cx + k, y: cy - r }, c2: { x: cx + r, y: cy - k } }
+    ]
+  };
+}
+function geomHeart(cx, cy, s) {
+  var f = s / 48;
+  function m(x, y) { return { x: cx + (x - 50) * f, y: cy + (y - 48) * f }; }
+  return {
+    type: 'bezier', closed: true,
+    points: [m(50, 88), m(4, 32), m(28, 8), m(50, 22), m(72, 8), m(96, 32), m(50, 88)],
+    ctrl: [
+      { c1: m(20, 68), c2: m(4, 48) },
+      { c1: m(4, 16), c2: m(16, 8) },
+      { c1: m(38, 8), c2: m(46, 14) },
+      { c1: m(54, 14), c2: m(62, 8) },
+      { c1: m(84, 8), c2: m(96, 16) },
+      { c1: m(96, 48), c2: m(80, 68) }
+    ]
+  };
+}
+function geomStar(cx, cy, R, r) {
+  var pts = [];
+  for (var i = 0; i < 10; i++) {
+    var ang = i * Math.PI / 5 - Math.PI / 2;
+    var rad = (i % 2 === 0) ? R : r;
+    pts.push({ x: cx + Math.cos(ang) * rad, y: cy + Math.sin(ang) * rad });
+  }
+  pts.push({ x: pts[0].x, y: pts[0].y });
+  return { type: 'bezier', closed: true, points: pts, ctrl: catmullCtrl(pts) };
+}
+function geomBolt(cx, cy, s) {
+  var f = s / 64;
+  function m(x, y) { return { x: cx + (x - 2) * f, y: cy + (y - 32) * f }; }
+  var pts = [m(12, 0), m(-8, 32), m(2, 32), m(-12, 64), m(14, 28), m(4, 28), m(12, 0)];
+  return { type: 'bezier', closed: false, points: pts, ctrl: catmullCtrl(pts) };
+}
+function geomWave(x0, x1, y, amp, waves) {
+  var pts = [], ctrl = [];
+  var n = Math.max(2, waves * 2);
+  var dx = (x1 - x0) / n;
+  pts.push({ x: x0, y: y });
+  for (var i = 0; i < n; i++) {
+    var xa = x0 + i * dx, xb = xa + dx;
+    var dir = (i % 2 === 0) ? -amp : amp;
+    ctrl.push({ c1: { x: xa + dx * 0.35, y: y + dir }, c2: { x: xb - dx * 0.35, y: y + dir } });
+    pts.push({ x: xb, y: y });
+  }
+  return { type: 'bezier', closed: false, points: pts, ctrl: ctrl };
+}
+function geomSmiley(cx, cy, r) {
+  var out = [geomCircle(cx, cy, r)];
+  out.push(geomCircle(cx - r * 0.36, cy - r * 0.33, r * 0.1));
+  out.push(geomCircle(cx + r * 0.36, cy - r * 0.33, r * 0.1));
+  var s0 = { x: cx - r * 0.5, y: cy + r * 0.22 }, s2 = { x: cx + r * 0.5, y: cy + r * 0.22 };
+  out.push({
+    type: 'bezier', closed: false,
+    points: [s0, { x: cx, y: cy + r * 0.62 }, s2],
+    ctrl: [
+      { c1: { x: cx - r * 0.32, y: cy + r * 0.55 }, c2: { x: cx - r * 0.18, y: cy + r * 0.62 } },
+      { c1: { x: cx + r * 0.18, y: cy + r * 0.62 }, c2: { x: cx + r * 0.32, y: cy + r * 0.55 } }
+    ]
+  });
+  return out;
+}
+
+/* ---- raster (image / text) -> neon centerline geoms ---- */
+function rasterToGeoms(rgba, w, h, opts) {
+  opts = opts || {};
+  var bin = binarize(rgba, w, h, opts.threshold || 128, !!opts.invert);
+  var skel = zhangSuen(bin, w, h);
+  var chains = traceSkeleton(skel, w, h, opts.minLenPx || 5);
+  return chainsToPaths(chains, {
+    eps: opts.eps === undefined ? 1.2 : opts.eps,
+    smooth: opts.smooth !== false
+  });
+}
+function textToNeonGeoms(text, fontPx) {
+  try {
+    var cv = document.createElement('canvas');
+    cv.width = 1200; cv.height = 420;
+    var ctx = cv.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 1200, 420);
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold ' + (fontPx || 280) + 'px Tahoma, Arial, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    try { ctx.direction = 'rtl'; } catch (e) { }
+    ctx.fillText(text, 600, 210);
+    var data = ctx.getImageData(0, 0, 1200, 420).data;
+    return rasterToGeoms(data, 1200, 420, { threshold: 128, invert: false, eps: 2.0, smooth: true, minLenPx: 10 });
+  } catch (e) {
+    return [];
+  }
+}
+function fitGeomsInto(geoms, bx, by, bw, bh) {
+  if (!geoms.length) return;
+  fitPathsToBoard(geoms, bw, bh, 0.04);
+  for (var i = 0; i < geoms.length; i++) {
+    for (var j = 0; j < geoms[i].points.length; j++) {
+      geoms[i].points[j].x += bx;
+      geoms[i].points[j].y += by;
+    }
+    if (geoms[i].ctrl) for (var k = 0; k < geoms[i].ctrl.length; k++) {
+      var c = geoms[i].ctrl[k];
+      if (!c) continue;
+      c.c1.x += bx; c.c1.y += by; c.c2.x += bx; c.c2.y += by;
+    }
+  }
+}
+
+/* ---- example projects ---- */
+function demoShapesProject() {
+  var pr = emptyProject();
+  pr.name = 'PRO — Shapes Gallery';
+  pr.texts = [{ id: newId(), x: 6, y: 8, text: 'PRO EXAMPLE — smooth neon shapes', sizeCm: 2.6 }];
+  var geoms = [];
+  geoms.push(geomStar(32, 30, 17, 7.5));
+  geoms.push(geomHeart(82, 30, 15));
+  geoms.push(geomBolt(126, 30, 18));
+  geoms = geoms.concat(geomSmiley(172, 30, 16));
+  geoms.push(geomWave(10, 120, 74, 6.5, 4));
+  geoms.push(geomCircle(150, 72, 13));
+  geoms.push(geomHeart(186, 72, 9));
+  pr.paths = wrapGeoms(geoms);
+  return pr;
+}
+function demoCafeProject() {
+  var pr = emptyProject();
+  pr.name = 'PRO — Cafe Sign (circle + نئون)';
+  pr.texts = [{ id: newId(), x: 6, y: 8, text: 'PRO EXAMPLE — circle + Persian text + shapes', sizeCm: 2.6 }];
+  var geoms = [];
+  geoms.push(geomCircle(52, 52, 30));
+  var tg = textToNeonGeoms('نئون', 300);
+  fitGeomsInto(tg, 52 - 20, 52 - 11, 40, 22);
+  geoms = geoms.concat(tg);
+  geoms.push(geomStar(112, 30, 15, 6.5));
+  geoms.push(geomHeart(150, 30, 13));
+  geoms.push(geomBolt(184, 30, 16));
+  geoms = geoms.concat(geomSmiley(112, 76, 13));
+  geoms.push(geomWave(138, 196, 76, 5, 3));
+  pr.paths = wrapGeoms(geoms);
+  return pr;
+}
+function loadExample(key) {
+  pushUndo();
+  if (key === 'chain') S.project = demoProject();
+  else if (key === 'shapes') S.project = demoShapesProject();
+  else if (key === 'cafe') S.project = demoCafeProject();
+  else S.project = emptyProject();
+  S.sel = [];
+  syncPropsFromProject();
+  recompute();
+  setStatus('Example loaded: ' + key + ' — ' + S.project.paths.length + ' path(s).', 'ok');
+}
+
+/* ---- double-line cutting channel (neon sits between the two lines) ---- */
+function channelForPath(path) {
+  var ch = (S.project.settings.channelMm || 10) / 20; /* half-width, cm */
+  var pts = flattenPath(path, 0.45);
+  if (pts.length < 2) return null;
+  var closed = dist(pts[0], pts[pts.length - 1]) < 1e-6;
+  return {
+    center: pts,
+    left: offsetPolyline(pts, ch, closed),
+    right: offsetPolyline(pts, -ch, closed)
+  };
+}
+function drawPts(ctx, pts) {
+  if (!pts || pts.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.stroke();
+}
+function polylineSvg(pts, layer, color) {
+  var s = [];
+  for (var i = 0; i < pts.length; i++) s.push(fnum(pts[i].x) + ',' + fnum(pts[i].y));
+  return '<polyline points="' + s.join(' ') + '" fill="none" stroke="' + color +
+    '" stroke-width="0.15" data-layer="' + layer + '"/>';
+}
+function exportCutSvg() {
+  var pr = S.project, W = pr.board.widthCm, H = pr.board.heightCm;
+  var a = ['<rect x="0" y="0" width="' + fnum(W) + '" height="' + fnum(H) + '" fill="none" stroke="#bbbbbb" stroke-width="0.2"/>'];
+  var incCenter = $('chkCutCenter') && $('chkCutCenter').checked;
+  for (var i = 0; i < pr.paths.length; i++) {
+    var ch = channelForPath(pr.paths[i]);
+    if (!ch) continue;
+    a.push(polylineSvg(ch.left, 'CUT1', '#000000'));
+    a.push(polylineSvg(ch.right, 'CUT2', '#000000'));
+    if (incCenter) a.push(polylineSvg(ch.center, 'CENTER', '#888888'));
+  }
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + fnum(W) + 'cm" height="' + fnum(H) +
+    'cm" viewBox="0 0 ' + fnum(W) + ' ' + fnum(H) + '">' + a.join('') + '</svg>';
+  download(safeName() + '-cut.svg', svg, 'image/svg+xml');
+  setStatus('CUT SVG exported — double-line channel for the cutting machine (real scale).', 'ok');
+}
+function exportCutDxf() {
+  var pr = S.project, W = pr.board.widthCm, H = pr.board.heightCm;
+  var o = [];
+  function push(s) { o.push(s); }
+  function yflip(y) { return H - y; }
+  function line(x1, y1, x2, y2, layer) {
+    push('0'); push('LINE'); push('8'); push(layer);
+    push('10'); push(fnum(x1)); push('20'); push(fnum(yflip(y1))); push('30'); push('0');
+    push('11'); push(fnum(x2)); push('21'); push(fnum(yflip(y2))); push('31'); push('0');
+  }
+  push('0'); push('SECTION'); push('2'); push('HEADER');
+  push('9'); push('$INSUNITS'); push('70'); push('4');
+  push('0'); push('ENDSEC');
+  push('0'); push('SECTION'); push('2'); push('ENTITIES');
+  var incCenter = $('chkCutCenter') && $('chkCutCenter').checked;
+  for (var i = 0; i < pr.paths.length; i++) {
+    var ch = channelForPath(pr.paths[i]);
+    if (!ch) continue;
+    var sides = [['CUT1', ch.left], ['CUT2', ch.right]];
+    if (incCenter) sides.push(['CENTER', ch.center]);
+    for (var s = 0; s < sides.length; s++) {
+      var pts = sides[s][1], layer = sides[s][0];
+      for (var k = 1; k < pts.length; k++) {
+        line(pts[k - 1].x, pts[k - 1].y, pts[k].x, pts[k].y, layer);
+      }
+    }
+  }
+  push('0'); push('ENDSEC');
+  push('0'); push('EOF');
+  download(safeName() + '-cut.dxf', o.join(String.fromCharCode(13, 10)), 'application/dxf');
+  setStatus('CUT DXF exported — send this to the cutting machine (units cm, Y-up, layers CUT1/CUT2).', 'ok');
+}
+
+/* ---- trace image modal ---- */
+var TRACE = { img: null };
+function openTraceFromImage(img) {
+  TRACE.img = img;
+  $('modalTrace').classList.remove('hidden');
+  updateTracePreview();
+}
+function traceScaledData(maxDim) {
+  var img = TRACE.img;
+  var sc = Math.min(1, maxDim / Math.max(img.width, img.height));
+  var w = Math.max(2, Math.round(img.width * sc)), h = Math.max(2, Math.round(img.height * sc));
+  var cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  var ctx = cv.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(img, 0, 0, w, h);
+  return { data: ctx.getImageData(0, 0, w, h).data, w: w, h: h };
+}
+function traceOpts() {
+  return {
+    threshold: parseFloat($('traceThresh').value),
+    invert: $('traceInvert').checked,
+    eps: Math.max(0.4, parseFloat($('traceDetail').value) / 4),
+    smooth: $('traceSmooth').checked,
+    minLenPx: 5
+  };
+}
+function updateTracePreview() {
+  if (!TRACE.img) return;
+  try {
+    var t = traceScaledData(320);
+    var geoms = rasterToGeoms(t.data, t.w, t.h, traceOpts());
+    var cv = $('traceCv');
+    var w = 360, h = Math.max(60, Math.round(360 * t.h / t.w));
+    cv.width = w; cv.height = h;
+    var ctx = cv.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 1.3; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    for (var g = 0; g < geoms.length; g++) {
+      traceGeomPx(ctx, geoms[g], t.w, t.h, w, h);
+    }
+  } catch (e) {
+    setStatus('Trace preview error: ' + e.message, 'err');
+  }
+}
+function traceGeomPx(ctx, gm, sw, sh, dw, dh) {
+  var sx = dw / sw, sy = dh / sh, pts = gm.points;
+  if (gm.type === 'bezier' && gm.ctrl) {
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x * sx, pts[0].y * sy);
+    for (var i = 0; i < gm.ctrl.length; i++) {
+      var c = gm.ctrl[i];
+      if (c) {
+        ctx.bezierCurveTo(c.c1.x * sx, c.c1.y * sy, c.c2.x * sx, c.c2.y * sy, pts[i + 1].x * sx, pts[i + 1].y * sy);
+      } else {
+        ctx.lineTo(pts[i + 1].x * sx, pts[i + 1].y * sy);
+      }
+    }
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x * sx, pts[0].y * sy);
+    for (var j = 1; j < pts.length; j++) ctx.lineTo(pts[j].x * sx, pts[j].y * sy);
+    ctx.stroke();
+  }
+}
+function applyTrace() {
+  try {
+    var t = traceScaledData(600);
+    var geoms = rasterToGeoms(t.data, t.w, t.h, traceOpts());
+    fitPathsToBoard(geoms, S.project.board.widthCm, S.project.board.heightCm, 0.06);
+    var minLen = parseFloat($('traceMinLen').value) || 3;
+    var keep = [];
+    for (var i = 0; i < geoms.length; i++) {
+      var L = 0, pts = geoms[i].points;
+      for (var j = 1; j < pts.length; j++) L += dist(pts[j - 1], pts[j]);
+      if (L >= minLen) keep.push(geoms[i]);
+    }
+    pushUndo();
+    var wrapped = wrapGeoms(keep);
+    for (var k = 0; k < wrapped.length; k++) S.project.paths.push(wrapped[k]);
+    $('modalTrace').classList.add('hidden');
+    recompute();
+    setStatus('Traced ' + wrapped.length + ' neon path(s) from image — lengths corrected to the ' +
+      fmt(S.project.profile.intervalCm) + ' cm cutting grid. Use CUT DXF for the machine.', 'ok');
+  } catch (e) {
+    setStatus('Trace failed: ' + e.message, 'err');
+  }
+}
+
 /* ---- keyboard / tabs / init ---- */
 function bindEvents() {
   /* tools */
@@ -2327,6 +3048,12 @@ function bindEvents() {
     draw();
   });
   $('toolSnapLen').addEventListener('click', snapAll);
+  $('toolChannel').addEventListener('click', function () {
+    S.showChannel = !S.showChannel;
+    $('toolChannel').classList.toggle('active', S.showChannel);
+    setStatus('Cutting channel preview: ' + (S.showChannel ? 'ON — double lines show what the machine cuts.' : 'OFF'), '');
+    draw();
+  });
   $('toolReverse').addEventListener('click', function () {
     if (!S.sel.length) { setStatus('Select a path first.', 'warn'); return; }
     pushUndo();
@@ -2360,14 +3087,44 @@ function bindEvents() {
   $('expPng').addEventListener('click', exportPNG);
   $('expCsv').addEventListener('click', exportCSV);
   $('expJson').addEventListener('click', exportJSON);
+  $('expCutDxf').addEventListener('click', exportCutDxf);
+  $('expCutSvg').addEventListener('click', exportCutSvg);
+  $('btnTrace').addEventListener('click', function () { $('imgInput').click(); });
+  $('imgInput').addEventListener('change', function (ev) {
+    var file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var img = new Image();
+      img.onload = function () { openTraceFromImage(img); };
+      img.onerror = function () { setStatus('Image could not be loaded.', 'err'); };
+      img.src = String(reader.result);
+    };
+    reader.readAsText ? reader.readAsDataURL(file) : reader.readAsDataURL(file);
+    ev.target.value = '';
+  });
+  var traceIds = ['traceThresh', 'traceDetail', 'traceInvert', 'traceSmooth'];
+  for (var ti = 0; ti < traceIds.length; ti++) {
+    $(traceIds[ti]).addEventListener('input', updateTracePreview);
+    $(traceIds[ti]).addEventListener('change', updateTracePreview);
+  }
+  $('traceCancel').addEventListener('click', function () {
+    $('modalTrace').classList.add('hidden');
+  });
+  $('traceApply').addEventListener('click', applyTrace);
+  $('exampleSel').addEventListener('change', function () {
+    var key = $('exampleSel').value;
+    $('exampleSel').value = '';
+    if (!key) return;
+    if (window.confirm('Load example "' + key + '" and replace the current design?')) loadExample(key);
+  });
   $('btnSave').addEventListener('click', saveProject);
   $('btnOpen').addEventListener('click', showOpenList);
   $('btnNew').addEventListener('click', function () {
     if (!window.confirm('Start a new empty project? (unsaved changes are kept in undo)')) return;
     pushUndo();
-    var d = demoProject();
-    d.paths = []; d.texts = []; d.name = 'New Project';
-    S.project = d; S.sel = [];
+    S.project = emptyProject();
+    S.sel = [];
     syncPropsFromProject(); recompute();
     setTool('pen');
   });
@@ -2387,7 +3144,7 @@ function bindEvents() {
 
   /* props */
   var propIds = ['projName', 'propWidth', 'propHeight', 'propNeonW', 'propInterval', 'propBend', 'propVolt',
-    'propPower', 'propRoll', 'propMaxPiece', 'propSpacing', 'propSafety', 'propPsu', 'propGrid', 'propNodeTol', 'profName'];
+    'propPower', 'propRoll', 'propMaxPiece', 'propSpacing', 'propSafety', 'propPsu', 'propGrid', 'propNodeTol', 'propChannel', 'profName'];
   for (var p = 0; p < propIds.length; p++) {
     $(propIds[p]).addEventListener('change', function () {
       pushUndo(); readProps(); recompute();
@@ -2519,6 +3276,7 @@ function bindEvents() {
 }
 
 function init() {
+  try { S.project = demoCafeProject(); } catch (e) { S.project = demoProject(); }
   syncPropsFromProject();
   bindEvents();
   var b = $('btnMode');

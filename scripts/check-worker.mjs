@@ -136,6 +136,84 @@ check('long path -> 3 pieces', lp.length === 3, lp.length);
 check('piece lengths 500/500/2.5', lp.map(p => p.lengthCm).join(',') === '500,500,2.5', lp.map(p => p.lengthCm).join(','));
 check('all piece lengths on 2.5 grid', lp.every(p => near(p.lengthCm / 2.5, Math.round(p.lengthCm / 2.5), 1e-6)));
 
+// ---- rdpSimplify: noisy straight line collapses to endpoints ----
+const noisy = [{ x: 0, y: 0 }, { x: 1, y: 0.2 }, { x: 2, y: -0.1 }, { x: 3, y: 0.15 }, { x: 4, y: 0 }];
+const simp = core.rdpSimplify(noisy, 0.5);
+check('RDP simplifies noisy line to 2 pts', simp.length === 2, simp.length);
+
+// ---- offsetPolyline: double-line channel geometry ----
+const off1 = core.offsetPolyline([{ x: 0, y: 0 }, { x: 10, y: 0 }], 1, false);
+check('offset straight line: parallel at 1cm', Math.abs(off1[0].y - (-1)) < 1e-9 && Math.abs(off1[1].y - (-1)) < 1e-9,
+  JSON.stringify(off1));
+const offL = core.offsetPolyline([{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }], 1, false);
+check('offset L-shape miter corner (11,-1)',
+  Math.abs(offL[1].x - 11) < 1e-9 && Math.abs(offL[1].y - (-1)) < 1e-9, JSON.stringify(offL));
+const sq = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }, { x: 0, y: 0 }];
+const sqOff = core.offsetPolyline(sq, 1, true);
+check('offset closed square: 5 pts, corner at (-1,-1)',
+  sqOff.length === 5 && Math.abs(sqOff[0].x - (-1)) < 1e-9 && Math.abs(sqOff[0].y - (-1)) < 1e-9, JSON.stringify(sqOff[0]));
+// both sides of a line are separated by the channel width
+const left = core.offsetPolyline([{ x: 0, y: 0 }, { x: 10, y: 0 }], 0.5, false);
+const right = core.offsetPolyline([{ x: 0, y: 0 }, { x: 10, y: 0 }], -0.5, false);
+check('double line gap = channel width', Math.abs(Math.abs(left[0].y - right[0].y) - 1) < 1e-9);
+
+// ---- flattenPath: bezier flattening length matches pathLength ---- */
+const circ = {
+  id: 'c', name: 'c', type: 'bezier',
+  points: [{ x: 10, y: 0 }, { x: 0, y: 10 }, { x: -10, y: 0 }, { x: 0, y: -10 }, { x: 10, y: 0 }],
+  ctrl: [
+    { c1: { x: 10, y: 5.523 }, c2: { x: 5.523, y: 10 } },
+    { c1: { x: -5.523, y: 10 }, c2: { x: -10, y: 5.523 } },
+    { c1: { x: -10, y: -5.523 }, c2: { x: -5.523, y: -10 } },
+    { c1: { x: 5.523, y: -10 }, c2: { x: 10, y: -5.523 } }
+  ]
+};
+const circL = core.pathLength(circ);
+const flat = core.flattenPath(circ, 0.2);
+let flatL = 0;
+for (let i = 1; i < flat.length; i++) flatL += core.dist(flat[i - 1], flat[i]);
+check('flatten circle r=10 length ~ 62.8', Math.abs(circL - 62.83) < 0.05, circL);
+check('flattened length matches', Math.abs(flatL - circL) < 0.05, flatL);
+const circOff = core.offsetPolyline(flat, 1, true);
+let od = 0;
+for (const p of circOff) od = Math.max(od, Math.abs(Math.sqrt(p.x * p.x + p.y * p.y) - 11));
+check('circle offset sits at r+1', od < 0.15, od);
+
+// ---- binarize + Zhang-Suen thinning + skeleton trace ---- */
+const W = 9, H = 9;
+const rgba = new Uint8ClampedArray(W * H * 4).fill(255);
+for (let y = 3; y <= 5; y++) {
+  for (let x = 1; x <= 7; x++) {
+    const p = (y * W + x) * 4;
+    rgba[p] = rgba[p + 1] = rgba[p + 2] = 0; // black 3px-thick bar
+  }
+}
+const bin = core.binarize(rgba, W, H, 128, false);
+check('binarize finds 21 px', bin.reduce((a, b) => a + b, 0) === 21, bin.reduce((a, b) => a + b, 0));
+const skel = core.zhangSuen(bin, W, H);
+const skelCount = skel.reduce((a, b) => a + b, 0);
+check('thinning shrinks bar to ~1px line', skelCount >= 3 && skelCount <= 12, skelCount);
+const chains = core.traceSkeleton(skel, W, H, 3);
+check('skeleton trace: 1 chain across the bar', chains.length === 1, chains.length);
+if (chains.length === 1) {
+  const xs = chains[0].map(p => p.x);
+  check('chain spans the bar width', chains[0].length >= 3 && (Math.max(...xs) - Math.min(...xs)) >= 3,
+    chains[0].length + ' pts, xrange=' + (Math.max(...xs) - Math.min(...xs)));
+}
+
+// ---- chainsToPaths + fitPathsToBoard ---- */
+const wave = [];
+for (let i = 0; i <= 20; i++) wave.push({ x: i * 2, y: Math.sin(i / 3) * 4 });
+const geoms = core.chainsToPaths([wave], { eps: 0.3, smooth: true });
+check('chainsToPaths -> bezier geom', geoms.length === 1 && geoms[0].type === 'bezier' && geoms[0].ctrl.length === geoms[0].points.length - 1);
+const sc = core.fitPathsToBoard(geoms, 100, 50, 0.05);
+check('fitPathsToBoard scales inside board', sc > 0);
+let inb = true;
+for (const p of geoms[0].points) {
+  if (p.x < -0.01 || p.x > 100.01 || p.y < -0.01 || p.y > 50.01) inb = false;
+}
+check('all points inside board box', inb);
+
 console.log('');
 if (fails) {
   console.error(fails + ' check(s) FAILED');

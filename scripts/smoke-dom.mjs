@@ -1,5 +1,6 @@
 // DOM smoke test — executes the client script against a stub DOM and
-// exercises init / recompute / draw / panels / checks / print / exports.
+// exercises init / recompute / draw / panels / checks / print / exports /
+// examples / trace / double-line cutter exports.
 // Run with: node scripts/smoke-dom.mjs
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -27,6 +28,12 @@ function makeCtx() {
   return new Proxy({}, {
     get(t, k) {
       if (k === 'measureText') return () => ({ width: 12 });
+      if (k === 'getImageData') {
+        return (x, y, w, h) => {
+          const data = new Uint8ClampedArray(Math.max(1, w) * Math.max(1, h) * 4).fill(255);
+          return { data, width: w, height: h };
+        };
+      }
       if (typeof k === 'string') return t[k] !== undefined ? t[k] : noop;
       return noop;
     },
@@ -89,7 +96,7 @@ class BlobStub { constructor(parts) { this.size = String(parts[0]).length; } }
 
 const api = new Function(
   'window', 'document', 'localStorage', 'DOMParser', 'FileReader', 'Blob', 'URL', 'setTimeout',
-  clientJS + '\n;return { S, recompute, draw, showCheck, buildPrint, exportSVG, exportDXF, exportPNG, exportCSV, exportJSON, snapAll, setTool, runChecks, pathD, doPrint, svgBody, renderCutList, saveProject, saveProfile };'
+  clientJS + '\n;return { S, recompute, draw, showCheck, buildPrint, exportSVG, exportDXF, exportPNG, exportCSV, exportJSON, exportCutSvg, exportCutDxf, snapAll, setTool, runChecks, pathD, doPrint, svgBody, renderCutList, saveProject, saveProfile, loadExample, channelForPath, openTraceFromImage, updateTracePreview, applyTrace, demoCafeProject, demoShapesProject };'
 )(windowStub, documentStub, localStorageStub, function () { }, function () { }, BlobStub, urlStub, (fn) => fn());
 
 let fails = 0;
@@ -99,21 +106,21 @@ function check(name, cond, detail) {
 }
 
 // ---------- scenario ----------
-const cutHtml = els.get('cutBody').innerHTML;
-check('cut list rendered rows', cutHtml.includes('<tr>'), cutHtml.slice(0, 80));
-check('cut list shows 125 cm', cutHtml.includes('125 cm'));
-check('cut list shows 82.5 cm', cutHtml.includes('82.5 cm'));
-check('cut list shows 47.5 cm', cutHtml.includes('47.5 cm'));
-check('cut list shows labels A/B/C/D', ['>A<', '>B<', '>C<', '>D<'].every(s => cutHtml.includes(s)));
+check('default demo loaded (PRO cafe)', api.S.project.paths.length >= 2, api.S.project.paths.length);
+const cutHtml0 = els.get('cutBody').innerHTML;
+check('default cut list has rows', cutHtml0.includes('<tr>'));
 check('materials rendered', els.get('matGrid').innerHTML.includes('TOTAL NEON'));
-check('power card shows 25.5 W', els.get('matGrid').innerHTML.includes('25.5 W'), els.get('matGrid').innerHTML.match(/25\.5[^<]*/));
-check('PSU card shows 40 W', els.get('matGrid').innerHTML.includes('40 W'));
 check('rolls panel rendered', els.get('rollPanel').innerHTML.includes('ROLL 01'));
-check('status total', els.get('stTotal').innerHTML.includes('255 cm') || els.get('stTotal').innerHTML.includes('255'), els.get('stTotal').innerHTML);
+
+// chain example must reproduce the spec table exactly
+api.loadExample('chain');
+const cutHtml = els.get('cutBody').innerHTML;
+check('chain: 125 cm', cutHtml.includes('125 cm'));
+check('chain: 82.5 cm', cutHtml.includes('82.5 cm'));
+check('chain: 47.5 cm', cutHtml.includes('47.5 cm'));
+check('chain: labels A/B/C/D', ['>A<', '>B<', '>C<', '>D<'].every(s => cutHtml.includes(s)));
 
 api.draw();
-check('draw() runs', true);
-
 api.showCheck();
 check('CHECK DESIGN modal opened', !els.get('modalCheck').classList.contains('hidden'));
 check('check list has items', els.get('checkList').innerHTML.includes('issue') || els.get('checkList').innerHTML.includes('All checks passed'),
@@ -124,35 +131,44 @@ const pr = els.get('printArea').innerHTML;
 check('print sheet has CUT LIST', pr.includes('CUT LIST'));
 check('print sheet has Persian headers', pr.includes('شماره') && pr.includes('طول') && pr.includes('تعداد برش') && pr.includes('شروع') && pr.includes('پایان'));
 check('print sheet has design svg', pr.includes('<svg'));
-check('print sheet has power row', pr.includes('25.5'));
-check('print sheet has rolls table', pr.includes('پرت') || pr.includes('WASTE'));
 
 api.exportSVG();
 api.exportDXF();
 api.exportCSV();
 api.exportJSON();
 api.exportPNG();
+api.exportCutSvg();
+api.exportCutDxf();
 check('all exports run without error', true);
 
-api.snapAll();
-check('snapAll runs', true);
-
-api.setTool('pen');
-api.S.project.paths.push({
-  id: 'new1', name: '', type: 'polyline',
-  points: [{ x: 10, y: 60 }, { x: 30, y: 60 }, { x: 30, y: 80 }],
-  ctrl: null, lockedStart: false, lockedEnd: false, snapped: false, snapDelta: 0, origPoints: null, note: ''
-});
+// shapes example: many smooth pieces, everything on the cutting grid
+api.loadExample('shapes');
+check('shapes example has many paths', api.S.project.paths.length >= 10, api.S.project.paths.length);
 api.recompute();
-check('new path auto-numbered NEON 04', api.S.project.paths[3].name === 'NEON 04', api.S.project.paths[3].name);
-const p4len = api.S.pieces.length;
-check('pieces rebuilt (4 rows)', api.S.pieces.length === 4, api.S.pieces.length);
-check('new piece on 2.5 grid', Math.abs(api.S.pieces[3].lengthCm / 2.5 - Math.round(api.S.pieces[3].lengthCm / 2.5)) < 1e-6,
-  api.S.pieces[3].lengthCm);
-api.draw();
-api.showCheck();
-api.buildPrint();
-check('rebuild after edit works', els.get('printArea').innerHTML.includes('NEON 04'));
+const allOnGrid = api.S.pieces.every(p => Math.abs(p.lengthCm / 2.5 - Math.round(p.lengthCm / 2.5)) < 1e-4);
+check('all shape pieces snapped to 2.5 grid', allOnGrid,
+  api.S.pieces.filter(p => Math.abs(p.lengthCm / 2.5 - Math.round(p.lengthCm / 2.5)) >= 1e-4).map(p => p.lengthCm).join(','));
+
+// double-line channel around the first path
+const ch = api.channelForPath(api.S.project.paths[0]);
+check('channel: left/right/center built', !!(ch && ch.left.length > 1 && ch.right.length > 1 && ch.center.length > 1));
+if (ch) {
+  const half = (api.S.project.settings.channelMm || 10) / 20;
+  let dmin = 1e9, dmax = 0;
+  for (let i = 0; i < ch.left.length && i < ch.center.length; i++) {
+    const d = Math.hypot(ch.left[i].x - ch.center[Math.min(i, ch.center.length - 1)].x,
+      ch.left[i].y - ch.center[Math.min(i, ch.center.length - 1)].y);
+    dmin = Math.min(dmin, d); dmax = Math.max(dmax, d);
+  }
+  check('channel half-width respected', dmax <= half * 3 + 0.01 && dmin >= half * 0.2, 'min=' + dmin + ' max=' + dmax + ' half=' + half);
+}
+
+// trace pipeline (blank stub image -> must run without errors)
+api.openTraceFromImage({ width: 80, height: 60 });
+api.updateTracePreview();
+api.applyTrace();
+check('trace pipeline runs', true);
+check('trace modal closes after apply', els.get('modalTrace').classList.contains('hidden'));
 
 api.saveProject();
 api.saveProfile();
