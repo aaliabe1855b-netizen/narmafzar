@@ -96,7 +96,7 @@ class BlobStub { constructor(parts) { this.size = String(parts[0]).length; } }
 
 const api = new Function(
   'window', 'document', 'localStorage', 'DOMParser', 'FileReader', 'Blob', 'URL', 'setTimeout',
-  clientJS + '\n;return { S, recompute, draw, showCheck, buildPrint, exportSVG, exportDXF, exportPNG, exportCSV, exportJSON, exportCutSvg, exportCutDxf, snapAll, setTool, runChecks, pathD, doPrint, svgBody, renderCutList, saveProject, saveProfile, loadExample, channelForPath, openTraceFromImage, updateTracePreview, applyTrace, demoCafeProject, demoShapesProject };'
+  clientJS + '\n;return { S, recompute, draw, showCheck, buildPrint, exportSVG, exportDXF, exportPNG, exportCSV, exportJSON, exportCutSvg, exportCutDxf, snapAll, setTool, runChecks, pathD, doPrint, svgBody, renderCutList, saveProject, saveProfile, loadExample, channelForPath, openTraceFromImage, updateTracePreview, applyTrace, demoCafeProject, demoShapesProject, openHelp };'
 )(windowStub, documentStub, localStorageStub, function () { }, function () { }, BlobStub, urlStub, (fn) => fn());
 
 let fails = 0;
@@ -107,6 +107,11 @@ function check(name, cond, detail) {
 
 // ---------- scenario ----------
 check('default demo loaded (PRO cafe)', api.S.project.paths.length >= 2, api.S.project.paths.length);
+check('help auto-opens on first visit', !els.get('modalHelp').classList.contains('hidden'));
+check('help content present in page', html.includes('راهنمای کامل NEON CAD') && html.includes('گردش کار کلی') && html.includes('فایل برش‌دهنده'));
+els.get('modalHelp').classList.add('hidden');
+api.openHelp();
+check('HELP button reopens guide', !els.get('modalHelp').classList.contains('hidden'));
 const cutHtml0 = els.get('cutBody').innerHTML;
 check('default cut list has rows', cutHtml0.includes('<tr>'));
 check('materials rendered', els.get('matGrid').innerHTML.includes('TOTAL NEON'));

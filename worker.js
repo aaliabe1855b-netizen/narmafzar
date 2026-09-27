@@ -176,6 +176,48 @@ tr.tot td{color:var(--gold); border-top:2px solid var(--line2);}
 .all-ok{text-align:center; padding:30px; color:var(--ok); font-size:15px;}
 .modal-actions{display:flex; justify-content:flex-end; gap:8px; margin-top:14px;}
 
+/* ---------- HELP (FA) ---------- */
+.help-card{width:min(920px, 94vw);}
+.help-wrap{display:flex; gap:14px; align-items:flex-start;}
+.help-toc{
+  width:188px; flex-shrink:0; display:flex; flex-direction:column; gap:4px;
+  position:sticky; top:0;
+}
+.help-toc button{
+  background:#0f1722; border:1px solid var(--line); color:var(--dim); border-radius:7px;
+  padding:7px 10px; font-size:11px; cursor:pointer; text-align:right;
+}
+.help-toc button:hover{border-color:var(--acc); color:var(--txt);}
+.help-body{
+  flex:1; min-width:0; max-height:62vh; overflow-y:auto; padding:4px 14px 14px;
+  direction:rtl; text-align:right; line-height:2;
+}
+.help-body h3{
+  font-size:15px; color:var(--acc); margin:18px 0 6px; padding-bottom:6px;
+  border-bottom:1px solid var(--line2);
+}
+.help-body h3:first-child{margin-top:0;}
+.help-body h4{font-size:12.5px; color:var(--acc2); margin:12px 0 4px;}
+.help-body p{font-size:12px; color:var(--txt); margin:4px 0;}
+.help-body ul, .help-body ol{margin:4px 22px 8px 0; font-size:12px; color:var(--txt);}
+.help-body li{margin:3px 0;}
+.help-body b{color:#fff;}
+.help-body .tip{
+  background:#0e2a33; border:1px solid #155e6b; border-radius:8px;
+  padding:8px 12px; margin:8px 0; font-size:11.5px; color:#a5f3fc;
+}
+.help-body .warn{
+  background:#3b2a0e; border:1px solid #92600e; border-radius:8px;
+  padding:8px 12px; margin:8px 0; font-size:11.5px; color:#fde68a;
+}
+.help-body table{width:100%; font-size:11px; margin:6px 0;}
+.help-body thead th{background:#16202c; color:var(--dim); padding:6px 8px; text-align:right;}
+.help-body td{padding:6px 8px; border-bottom:1px solid #18222e;}
+.help-body kbd{
+  background:#223042; border:1px solid var(--line2); border-bottom-width:2px;
+  border-radius:5px; padding:1px 7px; font-size:10.5px; margin:0 2px; direction:ltr; display:inline-block;
+}
+
 /* ---------- PRINT (PDF) ---------- */
 #printArea{display:none;}
 @media print{
@@ -241,6 +283,7 @@ tr.tot td{color:var(--gold); border-top:2px solid var(--line2);}
     <button id="btnOpen" class="btn sm" title="Open saved project">OPEN</button>
     <button id="btnImport" class="btn sm" title="Import SVG / JSON file">IMPORT</button>
     <button id="btnNew" class="btn sm" title="New empty project">NEW</button>
+    <button id="btnHelp" class="btn sm primary" title="راهنمای فارسی — F1">HELP / راهنما</button>
   </header>
 
   <div class="main">
@@ -435,6 +478,327 @@ tr.tot td{color:var(--gold); border-top:2px solid var(--line2);}
     <div class="modal-actions">
       <button id="traceCancel" class="btn">Cancel</button>
       <button id="traceApply" class="btn primary">Add to design</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ HELP / راهنما ============ -->
+<div class="modal hidden" id="modalHelp">
+  <div class="modal-card help-card">
+    <h2>راهنمای کامل NEON CAD</h2>
+    <div class="sub">هر آنچه برای رفتن از «یک طرح» تا «فایل آمادهٔ برش» نیاز دارید — از ترسیم تا محاسبهٔ برق و ارسال به برش‌دهنده</div>
+    <div class="help-wrap">
+      <div class="help-toc">
+        <button data-target="hs1">۱. گردش کار کلی</button>
+        <button data-target="hs2">۲. نوار بالا</button>
+        <button data-target="hs3">۳. ابزارها (TOOLS)</button>
+        <button data-target="hs4">۴. بوم طراحی (CANVAS)</button>
+        <button data-target="hs5">۵. ویژگی‌ها (PROPERTIES)</button>
+        <button data-target="hs6">۶. جدول برش و مواد</button>
+        <button data-target="hs7">۷. تبدیل عکس به نئون</button>
+        <button data-target="hs8">۸. فایل برش‌دهنده</button>
+        <button data-target="hs9">۹. بررسی نهایی (CHECK)</button>
+        <button data-target="hs10">۱۰. پروفایل نئون</button>
+        <button data-target="hs11">۱۱. ذخیره و میان‌برها</button>
+        <button data-target="hs12">۱۲. نکات و عیب‌یابی</button>
+      </div>
+      <div class="help-body" id="helpBody">
+
+        <section id="hs1">
+          <h3>۱. گردش کار کلی — از طرح تا تابلوی واقعی</h3>
+          <p>این نرم‌افزار طرح دیجیتال شما را به «مسیر واقعی نئون» تبدیل می‌کند، طول‌ها را از نظر هندسی اصلاح می‌کند تا با نقاط برش واقعی نئون هم‌خوان شوند، و در نهایت فایل آمادهٔ ساخت تحویل می‌دهد:</p>
+          <p style="text-align:center; background:#0f1722; border-radius:8px; padding:10px; direction:ltr;">
+            <b>Design &rarr; Neon Path &rarr; Geometry Fix (2.5cm) &rarr; Cut Points &rarr; Cut List &rarr; Power &rarr; CUT FILE</b>
+          </p>
+          <h4>مراحل پیشنهادی قدم‌به‌قدم</h4>
+          <ol>
+            <li>ابعاد تابلو را در <b>PROPERTIES</b> وارد کنید (مثلاً عرض 200 و ارتفاع 100 سانتی‌متر).</li>
+            <li>طرح را بکشید (Pen / Line / Bezier) یا با <b>TRACE IMAGE</b> از روی عکس بسازید یا از منوی <b>EXAMPLES</b> یک نمونه حرفه‌ای شروع کنید.</li>
+            <li>در حالت <b>AUTO MODE</b> نرم‌افزار خودکار شماره‌گذاری (NEON 01...) می‌کند و طول هر مسیر را <b>هندسیاً</b> اصلاح می‌کند تا مضرب 2.5 سانتی‌متر شود.</li>
+            <li>جدول برش پایین صفحه را بررسی کنید (شماره، طول، تعداد برش، شروع، پایان).</li>
+            <li>دکمهٔ <b>CHECK DESIGN</b> را بزنید و همهٔ هشدارها را برطرف کنید.</li>
+            <li>برای ساخت تابلو، <b>CUT DXF</b> (فایل برش‌دهنده) و <b>PRINT / PDF</b> (برگهٔ ساخت) را دانلود کنید.</li>
+            <li>متراژ و توان لازم را از تب <b>MATERIALS &amp; POWER</b> بردارید و منبع تغذیه مناسب بخرید.</li>
+          </ol>
+          <div class="tip">نکتهٔ طلایی: نرم‌افزار هیچ‌وقت طول را «فقط گرد نمی‌کند». اگر مسیری 83.2 سانت باشد، هندسهٔ آن را طوری تغییر می‌دهد که طول واقعی به 85 سانت (34 × 2.5) برسد و شکل تا حد امکان حفظ شود. به همین دلیل همهٔ نقاط START و END روی نقاط برش واقعی نئون می‌نشینند.</div>
+        </section>
+
+        <section id="hs2">
+          <h3>۲. نوار بالا (Top Bar)</h3>
+          <table>
+            <thead><tr><th>کنترل</th><th>کاربرد</th></tr></thead>
+            <tbody>
+              <tr><td><b>نام پروژه</b></td><td>نام طرح برای ذخیره و خروجی‌ها. تایپ کنید و Enter بزنید.</td></tr>
+              <tr><td><b>AUTO MODE / MANUAL MODE</b></td><td>در حالت خودکار، شماره‌گذاری، اصلاح طول‌ها و ساخت جدول برش بعد از هر تغییر انجام می‌شود. در حالت دستی، همه‌چیز تحت کنترل شماست (برای ویرایش دقیق).</td></tr>
+              <tr><td><b>Undo / Redo</b></td><td>بازگردانی یا تکرار آخرین تغییرات (Ctrl+Z / Ctrl+Y).</td></tr>
+              <tr><td><b>CHECK DESIGN</b></td><td>بررسی کامل طرح قبل از خروجی گرفتن — بخش ۹ را ببینید.</td></tr>
+              <tr><td><b>PRINT / PDF</b></td><td>برگهٔ ساخت: جدول برش + محاسبهٔ برق + پرت رول + نقشهٔ طرح. در پنجرهٔ چاپ مرورگر گزینهٔ Save as PDF را بزنید.</td></tr>
+              <tr><td><b>SVG / DXF / PNG / CSV / JSON</b></td><td>خروجی‌های معمول طرح (بخش ۸). CSV همان جدول برش است.</td></tr>
+              <tr><td><b>CUT DXF / CUT SVG</b></td><td><b>مهم‌ترین خروجی برای ساخت:</b> فایل «طرح دوبل» برای برش‌دهنده (بخش ۸).</td></tr>
+              <tr><td><b>TRACE IMAGE</b></td><td>تبدیل خودکار عکس به مسیر نئون — بخش ۷.</td></tr>
+              <tr><td><b>EXAMPLES</b></td><td>بارگذاری نمونه‌های حرفه‌ای: تابلوی کافه (دایره + نوشتهٔ فارسی نئون)، گالری اشکال، یا دموی زنجیره‌ای جدول برش.</td></tr>
+              <tr><td><b>SAVE / OPEN</b></td><td>ذخیره و باز کردن پروژه داخل همین مرورگر (بخش ۱۱).</td></tr>
+              <tr><td><b>IMPORT</b></td><td>وارد کردن فایل SVG (طراحی برداری) یا JSON (پروژهٔ ذخیره‌شده).</td></tr>
+              <tr><td><b>NEW</b></td><td>شروع پروژهٔ خالی روی همان تابلو.</td></tr>
+              <tr><td><b>HELP</b></td><td>همین راهنما. کلید F1 هم آن را باز می‌کند.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="hs3">
+          <h3>۳. ابزارها (TOOLS — سمت چپ)</h3>
+          <h4>ابزارهای ترسیم</h4>
+          <ul>
+            <li><b>Select (انتخاب)</b> — با کلیک روی هر مسیر آن را انتخاب کنید؛ با کشیدن جابه‌جایی می‌کند. رأس‌ها (نقطه‌های سفید) را بگیرید و بکشید تا شکل عوض شود. کلیک روی جای خالی، انتخاب را پاک می‌کند. با نگه‌داشتن Shift چند مسیر را با هم انتخاب کنید.</li>
+            <li><b>Pen (قلم)</b> — کلیک‌کلیک کنید تا خط شکسته (پلی‌خط) بسازید. با <kbd>Enter</kbd> یا <b>دوکلیک</b> تمام می‌شود. با <kbd>Esc</kbd> لغو می‌شود.</li>
+            <li><b>Line (خط)</b> — دو کلیک: نقطهٔ شروع و پایان یک خط صاف.</li>
+            <li><b>Bezier (منحنی)</b> — مانند Pen کلیک کنید؛ هنگام پایان، مسیر به‌صورت خودکار به منحنی‌های نرم (Catmull-Rom) تبدیل می‌شود — برای اشکال ارگانیک و خم‌دار نئون ایده‌آل است.</li>
+            <li><b>Text (متن)</b> — کلیک کنید و متن یادداشت بنویسید (روی طرح چاپ می‌شود ولی نئون نیست و در جدول برش نمی‌آید). برای متن نئونیِ واقعی از TRACE IMAGE استفاده کنید.</li>
+          </ul>
+          <h4>ابزارهای ویرایش</h4>
+          <ul>
+            <li><b>Snap Grid</b> — چسباندن نقاط به گرید (اندازهٔ گرید در PROPERTIES). فعال/غیرفعال.</li>
+            <li><b>Channel</b> — نمایش «طرح دوبل»: دو خط موازی اطراف هر مسیر که نشان می‌دهد برش‌دهنده کجاها را می‌برد و ریسه نئون کجا می‌نشیند.</li>
+            <li><b>Snap Lengths</b> — اصلاح هندسی طول همهٔ مسیرها تا مضرب گام برش شوند (در AUTO خودکار است؛ این دکمه برای MANUAL).</li>
+            <li><b>Reverse</b> — تغییر جهت مسیر انتخاب‌شده (نقطهٔ شروع و پایان عوض می‌شود).</li>
+            <li><b>Delete</b> — حذف مسیر انتخاب‌شده (کلید Delete هم همین کار را می‌کند).</li>
+          </ul>
+          <h4>ابزارهای اندازه‌گیری و تقسیم</h4>
+          <ul>
+            <li><b>Split (تقسیم)</b> — روی مسیر کلیک کنید تا دقیقاً در نزدیک‌ترین «نقطهٔ برش واقعی» (مضرب 2.5 سانت از ابتدای مسیر) به دو قطعه تقسیم شود. برای ساخت قطعات جداگانه ضروری است.</li>
+            <li><b>Measure (اندازه)</b> — دو کلیک؛ فاصلهٔ دقیق برحسب سانتی‌متر نمایش داده می‌شود.</li>
+          </ul>
+          <div class="tip">نکته: در حالت Select می‌توانید با کشیدن «دستگیره‌های آبی» روی مسیرهای منحنی، شکل خم‌ها را دقیق‌تر کنید.</div>
+        </section>
+
+        <section id="hs4">
+          <h3>۴. بوم طراحی (CANVAS — وسط صفحه)</h3>
+          <ul>
+            <li><b>زوم:</b> اسکرول موس (در جایی که نشانگر هست زوم می‌شود).</li>
+            <li><b>جابه‌جایی نما:</b> نگه‌داشتن <kbd>Space</kbd> + کشیدن موس، یا کشیدن با دکمهٔ وسط موس.</li>
+            <li><b>مختصات:</b> گوشهٔ پایین-چپ x و y را بر حسب سانتی‌متر نشان می‌دهد — همه‌چیز با مقیاس واقعی است.</li>
+            <li><b>گرید:</b> خطوط ریز = 1 سانت، خطوط درشت = 10 سانت. کادر تابلو با ابعادی که در PROPERTIES داده‌اید رسم می‌شود.</li>
+          </ul>
+          <h4>رنگ‌ها و برچسب‌ها روی طرح</h4>
+          <ul>
+            <li><b>NEON 01, NEON 02, ...</b> — شمارهٔ هر مسیر نئون (وسط مسیر).</li>
+            <li><b>START 01 / END 01</b> — نقطهٔ شروع (سبز) و پایان (قرمز) هر قطعهٔ قابل برش.</li>
+            <li><b>A , B , C , ...</b> — حروف نقاط اتصال: جایی که دو مسیر به هم می‌رسند یا انتهای آزاد هستند. همین حروف در جدول برش در ستون «شروع/پایان» می‌آیند.</li>
+            <li>خطوط سفید چین‌دار = انتخاب فعلی شما؛ خطوط سفید نازک اطراف مسیر (در حالت Channel) = خطوط برش.</li>
+          </ul>
+        </section>
+
+        <section id="hs5">
+          <h3>۵. ویژگی‌ها (PROPERTIES — سمت راست)</h3>
+          <h4>ابعاد تابلو</h4>
+          <table>
+            <thead><tr><th>فیلد</th><th>معنی</th></tr></thead>
+            <tbody>
+              <tr><td>Width / Height</td><td>عرض و ارتفاع تابلو بر حسب سانتی‌متر. مقیاس واقعی طرح از همین‌جا می‌آید.</td></tr>
+            </tbody>
+          </table>
+          <h4>پروفایل نئون (مشخصات ریسه)</h4>
+          <table>
+            <thead><tr><th>فیلد</th><th>معنی</th></tr></thead>
+            <tbody>
+              <tr><td>Saved profiles</td><td>پروفایل‌های ذخیره‌شده را انتخاب کنید تا همهٔ مشخصات زیر یک‌جا پر شود (بخش ۱۰).</td></tr>
+              <tr><td>Neon Width</td><td>عرض ریسه نئون بر حسب میلی‌متر (مثلاً 8). در رسم ضخامت نور و عرض کانال برش مؤثر است.</td></tr>
+              <tr><td>Cutting Interval</td><td><b>گام برش نئون</b> بر حسب سانتی‌متر (پیش‌فرض 2.5). ریسه نئون فقط در مضرب‌های این عدد بریده می‌شود؛ نرم‌افزار طول‌ها را هندسیاً روی همین گام می‌نشاند.</td></tr>
+              <tr><td>Minimum Bend Radius</td><td>حداقل شعاع خم نئون (میلی‌متر). گوشه‌های تیز‌تر از این در CHECK DESIGN هشدار می‌گیرند.</td></tr>
+              <tr><td>Voltage</td><td>ولتاژ ریسه (مثلاً 24V) — برای محاسبهٔ جریان.</td></tr>
+              <tr><td>Power per meter</td><td>مصرف هر متر نئون بر حسب وات (مثلاً 10). کاملاً قابل تنظیم.</td></tr>
+              <tr><td>Roll Length</td><td>طول هر رول نئون (سانتی‌متر، مثلاً 500). برای محاسبهٔ تعداد رول و پرت.</td></tr>
+            </tbody>
+          </table>
+          <h4>تنظیمات برش و برق</h4>
+          <table>
+            <thead><tr><th>فیلد</th><th>معنی</th></tr></thead>
+            <tbody>
+              <tr><td>Max Piece Length</td><td>حداکثر طول مجاز هر تکه. مسیرهای بلندتر خودکار به چند تکه (با نقطهٔ اتصال) تقسیم می‌شوند.</td></tr>
+              <tr><td>Min Path Spacing</td><td>حداقل فاصلهٔ مجاز بین دو مسیر نئون. نزدیک‌تر از این = خطا در CHECK DESIGN.</td></tr>
+              <tr><td>PSU Safety Factor</td><td>ضریب اطمینان منبع تغذیه (درصد). پیش‌فرض 80 یعنی منبع فقط 80٪ توانش استفاده شود (20٪ هدروم).</td></tr>
+              <tr><td>PSU Capacity</td><td>اگر منبع تغذیهٔ مشخصی دارید توانش را وارد کنید (وات) تا با توان کل مقایسه شود. 0 = پیشنهاد خودکار.</td></tr>
+              <tr><td>Grid Snap</td><td>گام چسباندن نقاط هنگام ترسیم (سانتی‌متر، پیش‌فرض 0.5).</td></tr>
+              <tr><td>Node Tolerance</td><td>تلورانس یکی‌شدن دو نقطهٔ انتهایی به‌عنوان «نقطهٔ اتصال» (سانتی‌متر).</td></tr>
+              <tr><td>Cutting Channel Width</td><td>عرض <b>کانال برش</b> (میلی‌متر). طرح دوبل با همین عرض اطراف مسیر ساخته می‌شود؛ پیش‌فرض 10 = نئون 8mm + خلاصی 2mm.</td></tr>
+              <tr><td>Include centerline</td><td>اگر تیک بخورید، مرکزخط مسیر هم به فایل برش‌دهنده اضافه می‌شود.</td></tr>
+            </tbody>
+          </table>
+          <h4>پنل مسیر انتخاب‌شده</h4>
+          <p>وقتی مسیری را انتخاب کنید: نام، طول هندسی، طول اصلاح‌شده، تعداد قطعات/برش‌ها و نقاط شروع/پایان آن نمایش داده می‌شود. دکمه‌ها:</p>
+          <ul>
+            <li><b>Reverse</b> — تغییر جهت مسیر.</li>
+            <li><b>Lock Start / Lock End</b> — قفل نقطهٔ شروع/پایان. نقطهٔ قفل هنگام اصلاح طول جابه‌جا نمی‌شود (برای اتصال به مسیر بعدی).</li>
+            <li><b>Snap Length</b> — اصلاح هندسی طول همین مسیر.</li>
+            <li><b>Delete Path</b> — حذف مسیر.</li>
+          </ul>
+        </section>
+
+        <section id="hs6">
+          <h3>۶. جدول برش و مواد (پایین صفحه)</h3>
+          <h4>تب CUT LIST — جدول برش</h4>
+          <table>
+            <thead><tr><th>ستون</th><th>معنی</th></tr></thead>
+            <tbody>
+              <tr><td>شماره (No.)</td><td>شمارهٔ قطعه — روی طرح با همان شماره START 01 / END 01 علامت خورده است.</td></tr>
+              <tr><td>طول (Length)</td><td>طول واقعی قطعه بر حسب سانتی‌متر (همیشه مضرب گام برش).</td></tr>
+              <tr><td>تعداد برش (Cuts)</td><td>تعداد واحدهای 2.5 سانتی‌متری داخل قطعه (طول ÷ 2.5).</td></tr>
+              <tr><td>شروع (Start)</td><td>نقطهٔ شروع قطعه (حرف نقطهٔ اتصال، مثل A).</td></tr>
+              <tr><td>پایان (End)</td><td>نقطهٔ پایان قطعه (مثل B).</td></tr>
+            </tbody>
+          </table>
+          <p>دکمهٔ <b>PRINT / PDF this table</b> بالای همین جدول، برگهٔ ساخت را چاپ می‌کند (همین جدول + نقشه + برق + پرت).</p>
+          <h4>تب MATERIALS &amp; POWER — مواد و برق</h4>
+          <ul>
+            <li><b>TOTAL NEON</b> — متراژ کل نئون بر حسب متر.</li>
+            <li><b>POWER</b> — توان کل = متراژ × توان هر متر.</li>
+            <li><b>POWER SUPPLY</b> — منبع تغذیهٔ پیشنهادی با احتساب ضریب اطمینان + جریان مصرفی (آمپر).</li>
+            <li><b>ROLLS &amp; WASTE</b> — تعداد رول لازم و مقدار پرت.</li>
+          </ul>
+          <h4>تب ROLLS &amp; WASTE — رول و پرت</h4>
+          <p>هر نوار = یک رول نئون. رنگ‌های داخل نوار = قطعات چیده‌شده روی آن رول، خاکستری = پرت. الگوریتم First-Fit-Decreasing قطعات را طوری کنار هم می‌گذارد که پرت حداقل شود. برای کم‌کردن پرت، طول قطعات را با ابزار Split یا تغییر طرح بهتر ترکیب کنید.</p>
+        </section>
+
+        <section id="hs7">
+          <h3>۷. تبدیل عکس به نئون (TRACE IMAGE)</h3>
+          <p>هر عکسی (PNG، JPG، WEBP، GIF، BMP) — لوگو، خط‌نویس، متن، طرح — را می‌توانید مستقیم به مسیر نئون تبدیل کنید:</p>
+          <ol>
+            <li>دکمهٔ <b>TRACE IMAGE</b> در نوار بالا را بزنید و عکس را انتخاب کنید.</li>
+            <li>در پنجرهٔ پیش‌نمایش، خطوط قرمز = همان مسیرهایی است که ساخته می‌شود.</li>
+            <li>اسلایدرها را تنظیم کنید (جدول زیر) تا نتیجه تمیز شود.</li>
+            <li><b>Add to design</b> را بزنید. مسیرها به تابلو اضافه و طولشان روی گام 2.5 سانت اصلاح می‌شود.</li>
+          </ol>
+          <table>
+            <thead><tr><th>کنترل</th><th>کاربرد</th></tr></thead>
+            <tbody>
+              <tr><td>Threshold</td><td>مرز سیاه/سفید. اگر اشکال ناقص افتاد، کمترش کنید؛ اگر لکهٔ اضافه می‌آید، بیشترش کنید.</td></tr>
+              <tr><td>Detail</td><td>ریزبینی. کمتر = خطوط نرم‌تر و تمیزتر. بیشتر = جزئیات بیشتر (و شلوغ‌تر).</td></tr>
+              <tr><td>Min stroke</td><td>حذف خط‌های خیلی کوتاه (نویز). روی 2 تا 4 سانت تنظیم خوبی است.</td></tr>
+              <tr><td>Invert</td><td>وقتی شکل روشن روی پس‌زمینهٔ تیره است تیک بزنید.</td></tr>
+              <tr><td>Smoothing</td><td>تبدیل خطوط به منحنی‌های نرم (پیشنهادی: روشن).</td></tr>
+            </tbody>
+          </table>
+          <div class="tip">بهترین نتیجه با عکس‌های پرکنتراست (سیاه روی سفید)، لوگوها و خط‌نویس‌ها به دست می‌آید. عکس‌های عادی یا تاری را اول در یک نرم‌افزار گرافیکی ساده سیاه‌وسفید کنید.</div>
+          <div class="warn">توجه: متن فارسی/انگلیسی داخل نمونهٔ «Cafe Sign» با همین روش تریس شده است. برای متن نئونی خودتان می‌توانید متن را در فتوشاپ/ویرایشگر عکس سیاه روی سفید بنویسید و عکسش را تریس کنید.</div>
+        </section>
+
+        <section id="hs8">
+          <h3>۸. فایل برش‌دهنده (CUT DXF / CUT SVG) و خروجی‌ها</h3>
+          <h4>طرح دوبل — فایلی که به برش‌دهنده می‌دهید</h4>
+          <p>ریسهٔ نئون داخل یک «کانال» (شیار) می‌نشیند. برای ساخت این کانال، ماشین باید <b>دو خط موازی</b> اطراف مسیر را ببرد. دکمه‌های <b>CUT DXF</b> و <b>CUT SVG</b> دقیقاً همین طرح دوبل را تولید می‌کنند:</p>
+          <ul>
+            <li>فاصلهٔ دو خط = عرض کانال (Cutting Channel Width، پیش‌فرض 10 میلی‌متر). ریسه دقیقاً وسط این دو خط قرار می‌گیرد.</li>
+            <li>لایه‌های فایل: <b>CUT1</b> و <b>CUT2</b> (و در صورت تیک‌زدن Include centerline، لایهٔ <b>CENTER</b>).</li>
+            <li>واحدها سانتی‌متر و مقیاس 1:1 — مستقیماً در نرم‌افزار برش‌دهنده (CNC / روتر / لیزر / برش ورق) باز می‌شود.</li>
+            <li>با ابزار <b>Channel</b> قبل از خروجی، خطوط برش را روی طرح ببینید.</li>
+          </ul>
+          <h4>بقیهٔ خروجی‌ها</h4>
+          <table>
+            <thead><tr><th>دکمه</th><th>محتوا</th></tr></thead>
+            <tbody>
+              <tr><td>SVG</td><td>نقشهٔ کامل طرح با شماره‌ها و برچسب‌ها (مقیاس واقعی — مناسب ایلاستریتور/اینک‌اسکیپ).</td></tr>
+              <tr><td>DXF</td><td>نقشهٔ کامل طرح (R12) برای CAD.</td></tr>
+              <tr><td>PNG</td><td>عکس با وضوح بالا از طرح.</td></tr>
+              <tr><td>CSV</td><td>جدول برش برای اکسل (شماره، طول، تعداد برش، شروع، پایان + جمع کل + برق).</td></tr>
+              <tr><td>JSON</td><td>کل پروژه — برای باز کردن دوباره یا ارسال به همکار.</td></tr>
+              <tr><td>PRINT / PDF</td><td>برگهٔ ساخت کامل: جدول برش + متریال + محاسبهٔ برق + پرت رول + نقشه + خط امضا.</td></tr>
+            </tbody>
+          </table>
+          <h4>پیشنهاد گردش ساخت واقعی</h4>
+          <ol>
+            <li>طراحی و CHECK DESIGN</li>
+            <li>دانلود <b>CUT DXF</b> ← ارسال به برش‌دهنده برای بریدن کانال/شیار روی صفحه.</li>
+            <li>دانلود <b>PRINT / PDF</b> ← برگهٔ ساخت برای تیم برش و مونتاژ.</li>
+            <li>طبق جدول برش، ریسه‌ها را ببرید (شروع/پایان هر قطعه روی نقاط برش واقعی 2.5cm است).</li>
+            <li>ریسه را داخل کانال بگذارید، سیم‌کشی نقطه‌های شروع/پایان (A، B، C...) و نصب منبع تغذیهٔ پیشنهادی.</li>
+          </ol>
+        </section>
+
+        <section id="hs9">
+          <h3>۹. بررسی نهایی (CHECK DESIGN)</h3>
+          <p>قبل از هر خروجی این دکمه را بزنید. نرم‌افزار کل طرح را بررسی و مشکلات را با برچسب رنگی نشان می‌دهد:</p>
+          <table>
+            <thead><tr><th>پیام</th><th>معنی</th><th>راه‌حل</th></tr></thead>
+            <tbody>
+              <tr><td>غیرقابل برش / LEN</td><td>طول مضرب گام برش نیست و هندسه قابل اصلاح نبود (مثلاً خط صافِ قفل‌شده).</td><td>مسیر را کمی تغییر شکل دهید یا قفل انتهاها را باز کنید، بعد Snap Lengths.</td></tr>
+              <tr><td>فاصله / SPACE</td><td>دو مسیر از حداقل فاصلهٔ مجاز به هم نزدیک‌ترند.</td><td>یکی را جابه‌جا کنید یا Min Path Spacing را کم کنید.</td></tr>
+              <tr><td>شعاع خم / BEND</td><td>گوشه‌ای تیزتر از حداقل شعاع خم نئون است — ریسه می‌شکند.</td><td>گوشه را نرم‌تر کنید (ابزار Bezier) یا Minimum Bend Radius را مطابق دیتاشیت ریسه تنظیم کنید.</td></tr>
+              <tr><td>باز/ناقص / OPEN</td><td>مسیر کمتر از 2 نقطه دارد یا خیلی کوتاه است.</td><td>تکمیل یا حذفش کنید.</td></tr>
+              <tr><td>اتصال / JOIN</td><td>دو انتهای مسیرها تقریباً چسبیده‌اند ولی به هم وصل نیستند.</td><td>یکی را روی دیگری بکشید (اتصال) یا بیشتر فاصله دهید.</td></tr>
+              <tr><td>توان / PSU</td><td>توان کل از ظرفیت منبع تغذیهٔ واردشده بیشتر است.</td><td>منبع بزرگ‌تر بگذارید (یا PSU Capacity را اصلاح کنید).</td></tr>
+              <tr><td>تکهٔ بلند / LONG</td><td>مسیر از حداکثر طول تکه بلندتر است (به چند تکه تقسیم شده — اتصال‌ها را چک کنید).</td><td>طبیعی است؛ فقط مطمئن شوید نقطه‌های تقسیم برای ساخت مناسبند.</td></tr>
+              <tr><td>گرید برش / GRID</td><td>طول تکه روی گام 2.5 ننشسته (در حالت دستی پیش می‌آید).</td><td>دکمهٔ Snap Lengths را بزنید.</td></tr>
+            </tbody>
+          </table>
+          <p>وقتی همه‌چیز درست باشد پیام «All checks passed» سبز می‌بینید — طرح آمادهٔ خروجی و ساخت است.</p>
+        </section>
+
+        <section id="hs10">
+          <h3>۱۰. پروفایل نئون (ذخیرهٔ مشخصات ریسه)</h3>
+          <p>اگر همیشه با یک نوع ریسه کار می‌کنید، مشخصاتش را یک‌بار ذخیره کنید:</p>
+          <ol>
+            <li>مشخصات را در PROPERTIES پر کنید (نام، عرض، ولتاژ، گام برش، شعاع خم، توان، طول رول).</li>
+            <li>دکمهٔ <b>Save Profile</b> را بزنید.</li>
+            <li>در پروژه‌های بعدی از فهرست <b>Saved profiles</b> همان را انتخاب کنید — همهٔ تنظیمات یک‌جا اعمال می‌شود.</li>
+            <li>با <b>Delete Profile</b> می‌توانید پروفایل حذف کنید.</li>
+          </ol>
+          <p>مثال: «Neon Flex 8mm» با عرض 8mm، ولتاژ 24V، برش هر 25mm، حداقل خم 30mm، توان 10W/m، رول 5m.</p>
+        </section>
+
+        <section id="hs11">
+          <h3>۱۱. ذخیره‌سازی، بازیابی و میان‌برها</h3>
+          <h4>ذخیره و باز کردن</h4>
+          <ul>
+            <li><b>SAVE</b> — پروژه در همین مرورگر (localStorage) ذخیره می‌شود. نام پروژه را در نوار بالا تنظیم کنید.</li>
+            <li><b>OPEN</b> — فهرست پروژه‌های ذخیره‌شده؛ هر کدام را باز یا حذف کنید.</li>
+            <li><b>JSON</b> (خروجی) و <b>IMPORT</b> — انتقال پروژه بین سیستم‌ها یا افراد.</li>
+            <li>هشدار: پاک‌کردن داده‌های مرورگر، پروژه‌های ذخیره‌شده را پاک می‌کند؛ برای طرح‌های مهم حتماً JSON خروجی بگیرید.</li>
+          </ul>
+          <h4>میان‌برهای صفحه‌کلید</h4>
+          <table>
+            <thead><tr><th>کلید</th><th>کار</th></tr></thead>
+            <tbody>
+              <tr><td><kbd>V</kbd></td><td>ابزار Select</td></tr>
+              <tr><td><kbd>P</kbd></td><td>ابزار Pen</td></tr>
+              <tr><td><kbd>L</kbd></td><td>ابزار Line</td></tr>
+              <tr><td><kbd>B</kbd></td><td>ابزار Bezier</td></tr>
+              <tr><td><kbd>T</kbd></td><td>ابزار Text</td></tr>
+              <tr><td><kbd>S</kbd></td><td>ابزار Split</td></tr>
+              <tr><td><kbd>M</kbd></td><td>ابزار Measure</td></tr>
+              <tr><td><kbd>Enter</kbd> / دوکلیک</td><td>پایان ترسیم جاری</td></tr>
+              <tr><td><kbd>Esc</kbd></td><td>لغو ترسیم / بستن پنجره / بازگشت به Select</td></tr>
+              <tr><td><kbd>Delete</kbd></td><td>حذف انتخاب</td></tr>
+              <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd></td><td>Undo / Redo</td></tr>
+              <tr><td><kbd>Space</kbd>+درگ</td><td>جابه‌جایی نما</td></tr>
+              <tr><td><kbd>F1</kbd></td><td>باز کردن همین راهنما</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="hs12">
+          <h3>۱۲. نکات مهم و عیب‌یابی</h3>
+          <h4>چرا طول‌ها بعد از ترسیم کمی عوض می‌شوند؟</h4>
+          <p>چون نرم‌افزار طول واقعی مسیر را <b>هندسیاً</b> اصلاح می‌کند تا دقیقاً مضرب گام برش (2.5cm) شود. این کار عمدی است: ریسه نئون فقط در نقاط برش کارخانه‌ای (هر 2.5cm) بریده می‌شود و اگر طول قطعه روی این گام نباشد، یا قطعه کوتاه می‌آید یا نمی‌توان آن را برید. شکل تا حد امکان حفظ می‌شود.</p>
+          <h4>چرا ستون «تعداد برش» مهم است؟</h4>
+          <p>به‌جای سانتی‌متر، کارخانه و تیم برش با «تعداد واحد 2.5cm» کار می‌کنند (مثلاً 50 یعنی 125 سانت). این ستون دقیقاً همان چیزی است که هنگام سفارش و برش لازم دارید.</p>
+          <h4>منبع تغذیه چند وات بگیرم؟</h4>
+          <p>از تب MATERIALS &amp; POWER مقدار «پیشنهادی» را ببینید. این عدد با ضریب اطمینان (پیش‌فرض 80٪) حساب شده؛ یعنی 20٪ ظرفیت منبع آزاد می‌ماند تا طولانی‌کاری و گرمای کمتری داشته باشید.</p>
+          <h4>تریس عکس تمیز درنیامد؟</h4>
+          <ul>
+            <li>Threshold را جابه‌جا کنید تا شکل کامل دیده شود.</li>
+            <li>Detail را کم کنید تا خطوط نرم شوند.</li>
+            <li>Min stroke را زیاد کنید تا نویزها حذف شوند.</li>
+            <li>عکس پرکنتراست‌تر (سیاه‌وسفید) استفاده کنید.</li>
+          </ul>
+          <h4>تفاوت AUTO و MANUAL چیست؟</h4>
+          <p>AUTO برای طراحی سریع و مطمئن: همه‌چیز خودکار مرتب می‌شود. MANUAL وقتی لازم است دقیقاً کنترل کنید: کدام نقطه قفل باشد، کجا تقسیم شود، جهت مسیر کدام باشد. حتی در MANUAL هم دکمه‌های Snap Lengths و Optimize در دسترس‌اند.</p>
+          <div class="tip">برای شروع سریع: منوی EXAMPLES را باز کنید و «Cafe Sign» را انتخاب کنید. یک تابلوی آماده با دایره، نوشتهٔ فارسی نئون و چند شکل می‌بینید — همان را ویرایش کنید یا از روی آن یاد بگیرید.</div>
+        </section>
+
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button id="btnCloseHelp" class="btn primary">بستن</button>
     </div>
   </div>
 </div>
@@ -3032,6 +3396,11 @@ function applyTrace() {
   }
 }
 
+function openHelp() {
+  $('modalHelp').classList.remove('hidden');
+  try { localStorage.setItem('narmafzar:helpSeen', '1'); } catch (e) { }
+}
+
 /* ---- keyboard / tabs / init ---- */
 function bindEvents() {
   /* tools */
@@ -3129,6 +3498,20 @@ function bindEvents() {
     setTool('pen');
   });
   $('btnImport').addEventListener('click', function () { $('fileInput').click(); });
+  $('btnHelp').addEventListener('click', openHelp);
+  $('btnCloseHelp').addEventListener('click', function () {
+    $('modalHelp').classList.add('hidden');
+    try { localStorage.setItem('narmafzar:helpSeen', '1'); } catch (e) { }
+  });
+  var tocEls = document.querySelectorAll('.help-toc button');
+  for (var tocI = 0; tocI < tocEls.length; tocI++) {
+    (function (el) {
+      el.addEventListener('click', function () {
+        var sec = document.getElementById(el.getAttribute('data-target'));
+        if (sec && sec.scrollIntoView) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    })(tocEls[tocI]);
+  }
   $('fileInput').addEventListener('change', function (ev) {
     var file = ev.target.files && ev.target.files[0];
     if (!file) return;
@@ -3254,11 +3637,14 @@ function bindEvents() {
     if (ev.target && (ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA' || ev.target.tagName === 'SELECT')) return;
     if (ev.code === 'Space') { S.spaceDown = true; ev.preventDefault(); }
     if (ev.key === 'Escape') {
+      if (!$('modalHelp').classList.contains('hidden')) { $('modalHelp').classList.add('hidden'); return; }
       if (!$('modalCheck').classList.contains('hidden')) { $('modalCheck').classList.add('hidden'); return; }
       if (!$('modalOpen').classList.contains('hidden')) { $('modalOpen').classList.add('hidden'); return; }
+      if (!$('modalTrace').classList.contains('hidden')) { $('modalTrace').classList.add('hidden'); return; }
       S.draft = null; S.measure = null;
       setTool('select');
     }
+    if (ev.key === 'F1') { ev.preventDefault(); openHelp(); return; }
     if (ev.key === 'Enter' && S.draft) finishDraft();
     if (ev.key === 'Delete' || ev.key === 'Backspace') deleteSelected();
     if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') { ev.preventDefault(); doUndo(); }
@@ -3285,6 +3671,10 @@ function init() {
   $('toolSnap').classList.add('active');
   recompute();
   setStatus('Ready — demo project loaded. Try Pen / Line / Bezier, then CHECK DESIGN and PRINT.', 'ok');
+  /* first visit: open the Persian guide automatically */
+  var helpSeen = null;
+  try { helpSeen = localStorage.getItem('narmafzar:helpSeen'); } catch (e) { }
+  if (!helpSeen) openHelp();
 }
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
